@@ -1,6 +1,12 @@
 import tkinter as tk
 from tkinter import messagebox
 import hashlib
+from . import saveJson
+
+# Passwords constraints
+special_char = "!#$%&'()*+,-./:;<=>?@^_`{|}~"
+upper_char = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+numbers = "1234567890"
 
 class LoginApp:
     def __init__(self, root):
@@ -11,14 +17,14 @@ class LoginApp:
         
         # Base de datos simulada (usuario: contraseña_hasheada)
         self.users = {
-            'admin': 'pass-hash'
+            #'admin': 'pass-hash'
         }
         
         self.create_widgets()
     
     def hash_password(self, password):
-        """Hashea la contraseña usando SHA-256"""
-        return 'pass-hash'
+        hashed = hashlib.sha256(password.encode())
+        return hashed.hexdigest()
     
     def create_widgets(self):
         # Frame principal
@@ -122,10 +128,42 @@ class LoginApp:
         info_frame = tk.Frame(main_frame, bg='#f0f0f0')
         info_frame.pack(pady=20)
         
+    def validate_password(self, password, constraints):
+        validation = False
+        for c in constraints:
+            if c in password:
+                validation = True
+        return validation
 
         
     def signin(self):
-        return print("usuario registrado")
+        username = self.user_entry.get().strip()
+        password = self.pass_entry.get().strip()
+
+
+        # Check password constraints
+        if not self.validate_password(password, special_char):
+            messagebox.showerror("Error", "La contraseña debe tener al menos un caracter especial")
+            return
+        if not self.validate_password(password, numbers):
+            messagebox.showerror("Error", "La contraseña debe tener al menos un número")
+            return
+        if not self.validate_password(password, upper_char):
+            messagebox.showerror("Error", "La contraseña debe tener al menos una mayúscula")
+            return
+
+        self.users = saveJson.cargar_diccionario("users-db.json")
+
+        if username in self.users:
+            messagebox.showerror("Error", "EL usuario ya existe!")
+
+        pwd_hashed = self.hash_password(password)
+
+        self.users[username] = pwd_hashed
+
+        saveJson.guardar_diccionario(self.users, "users-db.json")
+
+        messagebox.showinfo("Éxito", f"¡Se registró a {username} con éxito!")
     
     def login(self):
         """Verifica las credenciales del usuario"""
@@ -136,8 +174,9 @@ class LoginApp:
             messagebox.showerror("Error", "Por favor, complete todos los campos")
             return
         
+        self.users = saveJson.cargar_diccionario("users-db.json")
+
         # Verificar usuario y contraseña
-        # userJson = getUsersDB
         if username in self.users:
             hashed_password = self.hash_password(password)
             if self.users[username] == hashed_password:
@@ -199,7 +238,7 @@ def main():
     screen_height = root.winfo_screenheight()
     x = (screen_width - window_width) // 2
     y = (screen_height - window_height) // 2
-    
+    root.geometry(f'{window_width}x{window_height}+{x}+{y}')
     
     # Iniciar aplicación
     app = LoginApp(root)
